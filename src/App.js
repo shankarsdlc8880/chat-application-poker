@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { io } from "socket.io-client";
+import io from "socket.io-client";
 import { JOIN_ROOM, MESSAGE, SEND_MESSAGE } from "./soketConstants";
 
 // const socket = io("http://localhost:4000"); // Connect to backend
