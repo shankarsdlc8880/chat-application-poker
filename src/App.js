@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
-import { JOIN_ROOM, MESSAGE, SEND_MESSAGE } from "./soketConstants";
+import { JOIN_ROOM, MESSAGE, SEND_MESSAGE, LEAVE_ROOM } from "./soketConstants";
 
-// const socket = io("http://localhost:4000"); // Connect to backend
-// const socket = io("https://9wwhk0zs-4000.inc1.devtunnels.ms"); // Connect to backend
+const SOCKET_URL = "http://localhost:4000"; // Change this to your backend socket URL
 
 const App = () => {
   const [username, setUsername] = useState("");
@@ -11,63 +10,49 @@ const App = () => {
   const [messages, setMessages] = useState([]);
   const [joined, setJoined] = useState(false);
 
-  // // const socket = io("http://localhost:3002", {
-  // const socket = io("http://192.168.1.39:4000", {
-  //   // const socket = io("https://poker-api.testsdlc.in", {
-  //     transports: ["websocket"], // WebSocket only
-  //     upgrade: false, // If your server only supports WebSocket
-  //     query: {
-  //       playerId: 11111111111122, // Pass user ID in the query
-  //     },
-  //     reconnection: true, // Enable automatic reconnection
-  //     reconnectionAttempts: 5, // Limit reconnection attempts
-  //     reconnectionDelay: 5000, // Retry connection after 5 seconds
-  //     timeout: 20000, // Timeout for initial connection
-  //   });
+  const socketRef = useRef(null); // Store socket instance
 
-
-  const socket = io("http://localhost:4000", {
-    transports: ["websocket"], // Use WebSocket for faster connection
-    reconnection: true, // Enable auto-reconnection
-    reconnectionAttempts: 5, // Retry 5 times
-    reconnectionDelay: 2000, // Wait 2 seconds before retrying
-  });
-  
-  socket.on("connect", () => {
-    console.log("Connected to server:", socket.id);
-  });
-  
   useEffect(() => {
-    socket.on(MESSAGE, (msg) => {
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    socketRef.current.on("connect", () => {
+      console.log("Connected to server:", socketRef.current.id);
+    });
+
+    socketRef.current.on(MESSAGE, (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
 
-    console.log("socket",socket);
-    
-
-    return () => socket.off(MESSAGE);
+    return () => {
+      socketRef.current.disconnect(); // Cleanup socket connection on unmount
+    };
   }, []);
-
-  // const joinChat = () => {
-  //   if (username.trim()) {
-  //     socket.emit(JOIN_ROOM, username);
-  //     console.log(JOIN_ROOM, username);
-  //     setJoined(true);
-  //   }
-  // };
 
   const joinChat = () => {
     if (username.trim()) {
-      const conversationId = "12345"; // Set a test conversation ID
-      socket.emit(JOIN_ROOM, { conversationId, userId: username });
-      console.log("Emitting JOIN_ROOM", { conversationId, userId: username });
+      const conversationId = "12345";
+      socketRef.current.emit(JOIN_ROOM, { conversationId, userId: username });
       setJoined(true);
+    }
+  };
+
+  const leaveChat = () => {
+    if (joined) {
+      const conversationId = "12345";
+      socketRef.current.emit(LEAVE_ROOM, { conversationId, userId: username });
+      setJoined(false);
+      setMessages([]); // Clear chat history after leaving
     }
   };
 
   const sendMessage = () => {
     if (message.trim()) {
-      socket.emit(SEND_MESSAGE, { user: username, text: message });
+      socketRef.current.emit(SEND_MESSAGE, { user: username, text: message });
       setMessage("");
     }
   };
@@ -87,6 +72,7 @@ const App = () => {
         </div>
       ) : (
         <div style={styles.chatBox}>
+          <button onClick={leaveChat} style={styles.leaveButton}>Leave Chat</button>
           <div style={styles.messages}>
             {messages.map((msg, i) => (
               <p key={i} style={msg.user === username ? styles.myMessage : styles.otherMessage}>
@@ -119,6 +105,7 @@ const styles = {
   inputBox: { display: "flex", gap: "10px" },
   input: { padding: "8px", width: "100%" },
   button: { padding: "8px 16px", cursor: "pointer", background: "#007BFF", color: "#fff", border: "none", borderRadius: "5px" },
+  leaveButton: { padding: "8px 16px", cursor: "pointer", background: "#DC3545", color: "#fff", border: "none", borderRadius: "5px", marginBottom: "10px" },
   myMessage: { backgroundColor: "#dcf8c6", padding: "5px", borderRadius: "5px", marginBottom: "5px" },
   otherMessage: { backgroundColor: "#f1f0f0", padding: "5px", borderRadius: "5px", marginBottom: "5px" },
 };
