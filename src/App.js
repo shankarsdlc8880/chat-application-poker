@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
-import { JOIN_ROOM, MESSAGE, SEND_MESSAGE, LEAVE_ROOM } from "./soketConstants";
+import {
+  JOIN_CLUB_ROOM,
+  LEAVE_CLUB_ROOM,
+  SEND_CLUB_MESSAGE,
+  RECEIVE_CLUB_MESSAGE,
+} from "./soketConstants";
 
-const SOCKET_URL = "http://localhost:4000"; // Change this to your backend socket URL
+const SOCKET_URL = "http://localhost:4001"; // Change this to your backend socket URL
 
 const App = () => {
-  const [username, setUsername] = useState("");
+  const [userId, setUserId] = useState("");
+  const [conversationId, setConversationId] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [joined, setJoined] = useState(false);
 
-  const socketRef = useRef(null); // Store socket instance
+  const socketRef = useRef(null);
 
   useEffect(() => {
     socketRef.current = io(SOCKET_URL, {
@@ -24,35 +30,54 @@ const App = () => {
       console.log("Connected to server:", socketRef.current.id);
     });
 
-    socketRef.current.on(MESSAGE, (msg) => {
+    // Handle receiving messages
+    socketRef.current.on(RECEIVE_CLUB_MESSAGE, (msg) => {
+      console.log("Message received from socket ", msg)
       setMessages((prev) => [...prev, msg]);
     });
 
-    return () => {
-      socketRef.current.disconnect(); // Cleanup socket connection on unmount
+    // Leave room when window is closed or refreshed
+    const handleUnload = () => {
+      if (joined) {
+        socketRef.current.emit(LEAVE_CLUB_ROOM, conversationId);
+      }
     };
-  }, []);
+
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("unload", handleUnload);
+
+    return () => {
+      handleUnload(); // Leave room before unmounting
+      socketRef.current.disconnect();
+      socketRef.current.off(RECEIVE_CLUB_MESSAGE); // Remove event listener
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("unload", handleUnload);
+    };
+  }, [joined, conversationId]);
 
   const joinChat = () => {
-    if (username.trim()) {
-      const conversationId = "12345";
-      socketRef.current.emit(JOIN_ROOM, { conversationId, userId: username });
+    if (userId.trim() && conversationId.trim()) {
+      socketRef.current.emit(JOIN_CLUB_ROOM, { conversationId, userId });
       setJoined(true);
     }
   };
 
   const leaveChat = () => {
     if (joined) {
-      const conversationId = "12345";
-      socketRef.current.emit(LEAVE_ROOM, { conversationId, userId: username });
+      socketRef.current.emit(LEAVE_CLUB_ROOM, conversationId);
       setJoined(false);
-      setMessages([]); // Clear chat history after leaving
+      setMessages([]);
     }
   };
 
   const sendMessage = () => {
     if (message.trim()) {
-      socketRef.current.emit(SEND_MESSAGE, { user: username, text: message });
+      socketRef.current.emit(SEND_CLUB_MESSAGE, {
+        conversationId,
+        message,
+        senderId: socketRef.current.id, // Unique socket ID
+        senderUserId: userId, // User ID from input
+      });
       setMessage("");
     }
   };
@@ -63,9 +88,16 @@ const App = () => {
         <div style={styles.joinBox}>
           <input
             type="text"
-            placeholder="Enter your name"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter Conversation ID"
+            value={conversationId}
+            onChange={(e) => setConversationId(e.target.value)}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            placeholder="Enter User ID"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
             style={styles.input}
           />
           <button onClick={joinChat} style={styles.button}>Join Chat</button>
@@ -75,8 +107,8 @@ const App = () => {
           <button onClick={leaveChat} style={styles.leaveButton}>Leave Chat</button>
           <div style={styles.messages}>
             {messages.map((msg, i) => (
-              <p key={i} style={msg.user === username ? styles.myMessage : styles.otherMessage}>
-                <strong>{msg.user}: </strong> {msg.text}
+              <p key={i} style={msg.senderUserId === userId ? styles.myMessage : styles.otherMessage}>
+                <strong>{msg.senderUserId}: </strong> {msg.message}
               </p>
             ))}
           </div>
