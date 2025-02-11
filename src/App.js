@@ -1,13 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import io from "socket.io-client";
-import {
-  JOIN_CLUB_ROOM,
-  LEAVE_CLUB_ROOM,
-  SEND_CLUB_MESSAGE,
-  RECEIVE_CLUB_MESSAGE,
-} from "./soketConstants";
-
-const SOCKET_URL = "http://localhost:4001"; // Change this to your backend socket URL
+import React, { useState, useEffect } from "react";
+import { JOIN_ROOM, MESSAGE, SEND_MESSAGE, LEAVE_ROOM, RECEIVE_MESSAGE, USER_JOINED_ROOM } from "./soketConstants";
+import socket from "./socket";
 
 const App = () => {
   const [userId, setUserId] = useState("");
@@ -15,69 +8,45 @@ const App = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [joined, setJoined] = useState(false);
-
-  const socketRef = useRef(null);
+  const [users, setUsers] = useState([]);
+  const [roomId, setRoomId] = useState("")
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
-    socketRef.current = io(SOCKET_URL, {
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-    });
-
-    socketRef.current.on("connect", () => {
-      console.log("Connected to server:", socketRef.current.id);
-    });
-
-    // Handle receiving messages
-    socketRef.current.on(RECEIVE_CLUB_MESSAGE, (msg) => {
-      console.log("Message received from socket ", msg)
+    socket.on(RECEIVE_MESSAGE, (msg) => {
+      console.log("New Message Received", msg);
       setMessages((prev) => [...prev, msg]);
     });
 
-    // Leave room when window is closed or refreshed
-    const handleUnload = () => {
-      if (joined) {
-        socketRef.current.emit(LEAVE_CLUB_ROOM, conversationId);
-      }
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
-    window.addEventListener("unload", handleUnload);
+    socket.on(USER_JOINED_ROOM, (usernames) => {
+      console.log("New User Has Joined the Room", usernames)
+      setUsers(usernames);
+    });
 
     return () => {
-      handleUnload(); // Leave room before unmounting
-      socketRef.current.disconnect();
-      socketRef.current.off(RECEIVE_CLUB_MESSAGE); // Remove event listener
-      window.removeEventListener("beforeunload", handleUnload);
-      window.removeEventListener("unload", handleUnload);
+      socket.off(MESSAGE);
+      socket.off("USER_JOINED_ROOM");
     };
   }, [joined, conversationId]);
 
   const joinChat = () => {
-    if (userId.trim() && conversationId.trim()) {
-      socketRef.current.emit(JOIN_CLUB_ROOM, { conversationId, userId });
+
+    console.log(username , roomId)
+    if (username.trim() && roomId.trim()) {
+      socket.emit(JOIN_ROOM, { username, roomId });
       setJoined(true);
     }
   };
 
   const leaveChat = () => {
-    if (joined) {
-      socketRef.current.emit(LEAVE_CLUB_ROOM, conversationId);
-      setJoined(false);
-      setMessages([]);
-    }
+    socket.emit(LEAVE_ROOM, username);
+    setJoined(false);
+    setUsers([]);
+    setMessages([]);
   };
-
   const sendMessage = () => {
     if (message.trim()) {
-      socketRef.current.emit(SEND_CLUB_MESSAGE, {
-        conversationId,
-        message,
-        senderId: socketRef.current.id, // Unique socket ID
-        senderUserId: userId, // User ID from input
-      });
+      socket.emit(SEND_MESSAGE, { roomId, message });
       setMessage("");
     }
   };
@@ -86,29 +55,47 @@ const App = () => {
     <div style={styles.container}>
       {!joined ? (
         <div style={styles.joinBox}>
-          <input
-            type="text"
-            placeholder="Enter Conversation ID"
-            value={conversationId}
-            onChange={(e) => setConversationId(e.target.value)}
-            style={styles.input}
-          />
+       
           <input
             type="text"
             placeholder="Enter User ID"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             style={styles.input}
           />
-          <button onClick={joinChat} style={styles.button}>Join Chat</button>
+          <input
+            type="text"
+            placeholder="Enter your room id"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            style={styles.input}
+          />
+        
+          <button onClick={joinChat} style={styles.button}>
+            Join Chat
+          </button>
         </div>
       ) : (
         <div style={styles.chatBox}>
-          <button onClick={leaveChat} style={styles.leaveButton}>Leave Chat</button>
+          <div style={styles.usersList}>
+            <h4>Users in Room:</h4>
+            {users.length > 0 &&
+              users.map((user, index) => (
+                <p key={index} style={styles.user}>
+                  {index + 1}. {user}
+                </p>
+              ))}
+          </div>
+          <button onClick={leaveChat} style={styles.leaveButton}>
+            Leave Chat
+          </button>
           <div style={styles.messages}>
             {messages.map((msg, i) => (
-              <p key={i} style={msg.senderUserId === userId ? styles.myMessage : styles.otherMessage}>
-                <strong>{msg.senderUserId}: </strong> {msg.message}
+              <p
+                key={i}
+                style={msg.sender === username ? styles.myMessage : styles.otherMessage}
+              >
+                <strong>{msg.sender}: </strong> {msg.message}
               </p>
             ))}
           </div>
@@ -121,7 +108,9 @@ const App = () => {
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               style={styles.input}
             />
-            <button onClick={sendMessage} style={styles.button}>Send</button>
+            <button onClick={sendMessage} style={styles.button}>
+              Send
+            </button>
           </div>
         </div>
       )}
@@ -130,16 +119,95 @@ const App = () => {
 };
 
 const styles = {
-  container: { display: "flex", flexDirection: "column", alignItems: "center", height: "100vh", justifyContent: "center" },
-  joinBox: { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" },
-  chatBox: { width: "400px", border: "1px solid #ccc", padding: "10px", borderRadius: "5px" },
-  messages: { height: "300px", overflowY: "auto", marginBottom: "10px" },
-  inputBox: { display: "flex", gap: "10px" },
-  input: { padding: "8px", width: "100%" },
-  button: { padding: "8px 16px", cursor: "pointer", background: "#007BFF", color: "#fff", border: "none", borderRadius: "5px" },
-  leaveButton: { padding: "8px 16px", cursor: "pointer", background: "#DC3545", color: "#fff", border: "none", borderRadius: "5px", marginBottom: "10px" },
-  myMessage: { backgroundColor: "#dcf8c6", padding: "5px", borderRadius: "5px", marginBottom: "5px" },
-  otherMessage: { backgroundColor: "#f1f0f0", padding: "5px", borderRadius: "5px", marginBottom: "5px" },
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    height: "100vh",
+    justifyContent: "center",
+    backgroundColor: "#f4f7fc",
+  },
+  joinBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "10px",
+    backgroundColor: "#fff",
+    borderRadius: "8px",
+    padding: "20px",
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+  },
+  chatBox: {
+    width: "400px",
+    border: "1px solid #ccc",
+    padding: "20px",
+    borderRadius: "8px",
+    backgroundColor: "#fff",
+    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+  },
+  usersList: {
+    marginBottom: "10px",
+    paddingBottom: "10px",
+    borderBottom: "1px solid #ccc",
+  },
+  user: {
+    fontSize: "14px",
+    margin: "5px 0",
+  },
+  messages: {
+    height: "300px",
+    overflowY: "auto",
+    marginBottom: "10px",
+    padding: "10px",
+    backgroundColor: "#f9f9f9",
+    borderRadius: "8px",
+  },
+  inputBox: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  input: {
+    padding: "10px",
+    width: "80%",
+    borderRadius: "5px",
+    border: "1px solid #ddd",
+    fontSize: "14px",
+  },
+  button: {
+    padding: "10px 20px",
+    cursor: "pointer",
+    background: "#007BFF",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    fontSize: "14px",
+    transition: "background 0.3s ease",
+  },
+  leaveButton: {
+    padding: "10px 20px",
+    cursor: "pointer",
+    background: "#DC3545",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    marginBottom: "10px",
+    fontSize: "14px",
+    transition: "background 0.3s ease",
+  },
+  myMessage: {
+    backgroundColor: "#dcf8c6",
+    padding: "8px",
+    borderRadius: "5px",
+    marginBottom: "5px",
+  },
+  otherMessage: {
+    backgroundColor: "#f1f0f0",
+    padding: "8px",
+    borderRadius: "5px",
+    marginBottom: "5px",
+  },
 };
 
 export default App;
