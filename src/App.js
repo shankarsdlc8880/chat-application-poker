@@ -11,6 +11,7 @@ const App = () => {
   const [users, setUsers] = useState([]);
   const [roomId, setRoomId] = useState("")
   const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
@@ -18,9 +19,11 @@ const App = () => {
       setMessages((prev) => [...prev, msg]);
     });
 
-    socket.on(USER_JOIN_CLUB_ROOM, (usernames) => {
-      console.log("New User Has Joined the Room", usernames)
-      setUsers(usernames);
+    socket.on(USER_JOIN_CLUB_ROOM, ({ users, chats }) => {
+      console.log("New User Has Joined the Room", users)
+      setUsers(users);
+      setMessages(chats)
+      console.log(chats)
     });
 
     return () => {
@@ -29,12 +32,14 @@ const App = () => {
     };
   }, [joined, conversationId]);
 
-  const joinChat = () => {
-
+  const joinChat = async () => {
+    setLoading(true);
     console.log(username, roomId)
     if (username.trim() && roomId.trim()) {
-      socket.emit(JOIN_CLUB_ROOM, { memberId: username, conversationId: roomId });
+      await socket.emit(JOIN_CLUB_ROOM, { memberId: username, conversationId: roomId });
       setJoined(true);
+     
+      setLoading(false)
     }
   };
 
@@ -91,12 +96,12 @@ const App = () => {
             Leave Chat
           </button>
           <div style={styles.messages}>
-            {messages.map((msg, i) => (
+            {loading?<p>Loading...</p>: messages?.length>0 &&  messages.map((msg, i) => (
               <p
                 key={i}
-                style={msg.sender === username ? styles.myMessage : styles.otherMessage}
+                style={msg.senderId == username ? styles.myMessage : styles.otherMessage}
               >
-                <strong>{msg.sender}: </strong> {msg.message}
+                <strong>{msg.senderId}: </strong> {msg.message}
               </p>
             ))}
           </div>
