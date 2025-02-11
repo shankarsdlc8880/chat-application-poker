@@ -33,20 +33,21 @@ const App = () => {
 
     console.log(username, roomId)
     if (username.trim() && roomId.trim()) {
-      socket.emit(JOIN_CLUB_ROOM, { username, roomId });
+      socket.emit(JOIN_CLUB_ROOM, { memberId: username, conversationId: roomId });
       setJoined(true);
     }
   };
 
   const leaveChat = () => {
-    socket.emit(LEAVE_CLUB_ROOM, {username, roomId});
+    socket.emit(LEAVE_CLUB_ROOM, { username, roomId });
     setJoined(false);
     setUsers([]);
     setMessages([]);
   };
+
   const sendMessage = () => {
     if (message.trim()) {
-      socket.emit(SEND_CLUB_MESSAGE, { roomId, message });
+      socket.emit(SEND_CLUB_MESSAGE, { conversationId: roomId, message });
       setMessage("");
     }
   };
