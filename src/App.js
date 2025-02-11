@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { JOIN_ROOM, MESSAGE, SEND_MESSAGE, LEAVE_ROOM, RECEIVE_MESSAGE, USER_JOINED_ROOM } from "./soketConstants";
+import { JOIN_CLUB_ROOM, USER_JOIN_CLUB_ROOM, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE } from "./soketConstants";
 import socket from "./socket";
 
 const App = () => {
@@ -13,40 +13,40 @@ const App = () => {
   const [username, setUsername] = useState("");
 
   useEffect(() => {
-    socket.on(RECEIVE_MESSAGE, (msg) => {
+    socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
       console.log("New Message Received", msg);
       setMessages((prev) => [...prev, msg]);
     });
 
-    socket.on(USER_JOINED_ROOM, (usernames) => {
+    socket.on(USER_JOIN_CLUB_ROOM, (usernames) => {
       console.log("New User Has Joined the Room", usernames)
       setUsers(usernames);
     });
 
     return () => {
-      socket.off(MESSAGE);
-      socket.off("USER_JOINED_ROOM");
+      socket.off(RECEIVE_CLUB_MESSAGE);
+      socket.off(USER_JOIN_CLUB_ROOM);
     };
   }, [joined, conversationId]);
 
   const joinChat = () => {
 
-    console.log(username , roomId)
+    console.log(username, roomId)
     if (username.trim() && roomId.trim()) {
-      socket.emit(JOIN_ROOM, { username, roomId });
+      socket.emit(JOIN_CLUB_ROOM, { username, roomId });
       setJoined(true);
     }
   };
 
   const leaveChat = () => {
-    socket.emit(LEAVE_ROOM, username);
+    socket.emit(LEAVE_CLUB_ROOM, {username, roomId});
     setJoined(false);
     setUsers([]);
     setMessages([]);
   };
   const sendMessage = () => {
     if (message.trim()) {
-      socket.emit(SEND_MESSAGE, { roomId, message });
+      socket.emit(SEND_CLUB_MESSAGE, { roomId, message });
       setMessage("");
     }
   };
@@ -55,7 +55,7 @@ const App = () => {
     <div style={styles.container}>
       {!joined ? (
         <div style={styles.joinBox}>
-       
+
           <input
             type="text"
             placeholder="Enter User ID"
@@ -70,7 +70,7 @@ const App = () => {
             onChange={(e) => setRoomId(e.target.value)}
             style={styles.input}
           />
-        
+
           <button onClick={joinChat} style={styles.button}>
             Join Chat
           </button>
