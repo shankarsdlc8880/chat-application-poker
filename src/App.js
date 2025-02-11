@@ -39,7 +39,7 @@ const App = () => {
   };
 
   const leaveChat = () => {
-    socket.emit(LEAVE_CLUB_ROOM, { username, roomId });
+    socket.emit(LEAVE_CLUB_ROOM, { memberId: username, conversationId: roomId });
     setJoined(false);
     setUsers([]);
     setMessages([]);
@@ -47,7 +47,7 @@ const App = () => {
 
   const sendMessage = () => {
     if (message.trim()) {
-      socket.emit(SEND_CLUB_MESSAGE, { conversationId: roomId, message });
+      socket.emit(SEND_CLUB_MESSAGE, { conversationId: roomId, message, senderId: username });
       setMessage("");
     }
   };
