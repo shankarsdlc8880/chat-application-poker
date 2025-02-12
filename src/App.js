@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { JOIN_CLUB_ROOM, USER_JOIN_CLUB_ROOM, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE } from "./soketConstants";
+import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, USER_JOIN_CLUB_ROOM, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE } from "./soketConstants";
 import socket from "./socket";
 
 const App = () => {
@@ -12,6 +12,8 @@ const App = () => {
   const [roomId, setRoomId] = useState("")
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false)
+  const [messageId, setMessageId] = useState("")
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
     socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
@@ -57,67 +59,45 @@ const App = () => {
     }
   };
 
+  const confirmDeleteMessage = () => {
+    if (messageId.trim()) {
+      socket.emit(DELETE_CLUB_MESSAGE, { messageId });
+      setMessages(messages.filter(item => item._id !== messageId))
+      setShowPopup(false);
+      setMessageId("");
+    }
+  };
+
   return (
     <div style={styles.container}>
       {!joined ? (
         <div style={styles.joinBox}>
-
-          <input
-            type="text"
-            placeholder="Enter User ID"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            type="text"
-            placeholder="Enter your room id"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            style={styles.input}
-          />
-
-          <button onClick={joinChat} style={styles.button}>
-            Join Chat
-          </button>
+          <input type="text" placeholder="Enter User ID" value={username} onChange={(e) => setUsername(e.target.value)} style={styles.input} />
+          <input type="text" placeholder="Enter your room id" value={roomId} onChange={(e) => setRoomId(e.target.value)} style={styles.input} />
+          <button onClick={joinChat} style={styles.button}>Join Chat</button>
         </div>
       ) : (
         <div style={styles.chatBox}>
-          <div style={styles.usersList}>
-            <h4>Users in Room:</h4>
-            {users.length > 0 &&
-              users.map((user, index) => (
-                <p key={index} style={styles.user}>
-                  {index + 1}. {user}
-                </p>
-              ))}
-          </div>
-          <button onClick={leaveChat} style={styles.leaveButton}>
-            Leave Chat
-          </button>
+          <button onClick={leaveChat} style={styles.leaveButton}>Leave Chat</button>
           <div style={styles.messages}>
             {loading?<p>Loading...</p>: messages?.length>0 &&  messages.map((msg, i) => (
-              <p
-                key={i}
-                style={msg.senderId == username ? styles.myMessage : styles.otherMessage}
-              >
+              <div key={i} style={msg.senderId == username ? styles.myMessage : styles.otherMessage}>
                 <strong>{msg.senderId}: </strong> {msg.message}
-              </p>
+                <button style={styles.deleteButton} onClick={() => { setShowPopup(true); setMessageId(msg._id); }}>Delete</button>
+              </div>
             ))}
           </div>
           <div style={styles.inputBox}>
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              style={styles.input}
-            />
-            <button onClick={sendMessage} style={styles.button}>
-              Send
-            </button>
+            <input type="text" placeholder="Type a message..." value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} style={styles.input} />
+            <button onClick={sendMessage} style={styles.button}>Send</button>
           </div>
+        </div>
+      )}
+      {showPopup && (
+        <div style={styles.popup}>
+          <h4>Are you sure ? want to delete this message.</h4>
+          <button onClick={confirmDeleteMessage} style={styles.confirmButton}>Confirm</button>
+          <button onClick={() => setShowPopup(false)} style={styles.cancelButton}>Cancel</button>
         </div>
       )}
     </div>
@@ -125,95 +105,56 @@ const App = () => {
 };
 
 const styles = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    height: "100vh",
-    justifyContent: "center",
-    backgroundColor: "#f4f7fc",
-  },
-  joinBox: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "10px",
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "20px",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-  },
-  chatBox: {
-    width: "400px",
-    border: "1px solid #ccc",
-    padding: "20px",
-    borderRadius: "8px",
-    backgroundColor: "#fff",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-  },
-  usersList: {
-    marginBottom: "10px",
-    paddingBottom: "10px",
-    borderBottom: "1px solid #ccc",
-  },
-  user: {
-    fontSize: "14px",
-    margin: "5px 0",
+  container: { textAlign: "center", padding: "20px" },
+  joinBox: { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" },
+  chatBox: { 
+    width: "1000px", 
+    height: "80vh", 
+    display: "flex", 
+    flexDirection: "column", 
+    margin: "auto", 
+    padding: "20px", 
+    border: "1px solid #ccc", 
+    borderRadius: "8px", 
+    backgroundColor: "#fff"
   },
   messages: {
-    height: "300px",
+    flexGrow: 1,  /* Allows messages to take up available space */
+    minHeight: "400px", /* Keeps message box from collapsing */
+    maxHeight: "600px",
     overflowY: "auto",
-    marginBottom: "10px",
+    overflowX: "hidden",
+    marginBottom: "20px",
     padding: "10px",
-    backgroundColor: "#f9f9f9",
-    borderRadius: "8px",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word"
   },
-  inputBox: {
-    display: "flex",
-    gap: "10px",
+  inputBox: { 
+    display: "flex", 
+    gap: "10px", 
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  input: {
     padding: "10px",
-    width: "80%",
-    borderRadius: "5px",
-    border: "1px solid #ddd",
-    fontSize: "14px",
   },
-  button: {
-    padding: "10px 20px",
+  input: { padding: "10px", width: "80%", borderRadius: "5px", border: "1px solid #ddd" },
+  button: { padding: "10px", background: "#007BFF", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" },
+  // leaveButton: { background: "#DC3545", width: "50%" },
+  leaveButton: { 
+    background: "#DC3545", 
+    color: "white", 
+    padding: "15px", /* Increased padding for height */
+    border: "none", 
+    borderRadius: "5px", 
     cursor: "pointer",
-    background: "#007BFF",
-    color: "#fff",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "14px",
-    transition: "background 0.3s ease",
+    width: "20%", 
+    fontSize: "16px", /* Makes the text larger */
+    fontWeight: "bold" /* Improves readability */
   },
-  leaveButton: {
-    padding: "10px 20px",
-    cursor: "pointer",
-    background: "#DC3545",
-    color: "#fff",
-    border: "none",
-    borderRadius: "5px",
-    marginBottom: "10px",
-    fontSize: "14px",
-    transition: "background 0.3s ease",
-  },
-  myMessage: {
-    backgroundColor: "#dcf8c6",
-    padding: "8px",
-    borderRadius: "5px",
-    marginBottom: "5px",
-  },
-  otherMessage: {
-    backgroundColor: "#f1f0f0",
-    padding: "8px",
-    borderRadius: "5px",
-    marginBottom: "5px",
-  },
+  myMessage: { backgroundColor: "#dcf8c6", padding: "8px", borderRadius: "5px", marginBottom: "5px", display: "flex", justifyContent: "space-between" },
+  otherMessage: { backgroundColor: "#f1f0f0", padding: "8px", borderRadius: "5px", marginBottom: "5px", display: "flex", justifyContent: "space-between" },
+  deleteButton: { marginLeft: "10px", padding: "5px", background: "red", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" },
+  popup: { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", backgroundColor: "white", padding: "20px", borderRadius: "8px", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)" },
+  confirmButton: { background: "green", color: "white", padding: "10px", borderRadius: "5px", cursor: "pointer" },
+  cancelButton: { background: "gray", color: "white", padding: "10px", borderRadius: "5px", cursor: "pointer", marginLeft: "10px" },
 };
 
 export default App;
