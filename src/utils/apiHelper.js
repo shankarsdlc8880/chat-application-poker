@@ -1,10 +1,10 @@
-import {axiosApi, privateAxios} from '../services/axios';
-const baseUrl = import.meta.env.VITE_API_URL;
-const authBaseUrl = import.meta.env.AUTH_API_URL;
+import { axiosApi, privateAxios } from '../services/axios';
+const baseUrl = process.env.REACT_APP_CHAT_SERVICE_API_URL;
+const authBaseUrl = process.env.REACT_APP_AUTH_API_URL;
 
-export async function apiGET(url,data, config = {}) {
+export async function apiGET(url, data, config = {}) {
   return await privateAxios
-    .get(url,{...data}, { ...config })
+    .get(url, { ...data }, { ...config })
     .then((response) => response)
     .catch((error) => error.response);
 }

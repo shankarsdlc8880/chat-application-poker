@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, USER_JOIN_CLUB_ROOM, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDITED_CLUB_MESSAGE, UPDATE_CLUB_MESSAGE } from "./soketConstants";
+import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, CLUB_MESSAGE_EDITED, EDIT_CLUB_MESSAGE } from "./soketConstants";
 import socket from "./socket";
+import { apiGET } from "./utils/apiHelper";
 
 const App = () => {
   const [userId, setUserId] = useState("");
@@ -18,24 +19,20 @@ const App = () => {
   const [updateMessage, setUpdateMessage] = useState("")
 
   useEffect(() => {
-
-
-
-
     socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
       console.log("New Message Received", msg);
       setMessages((prev) => [...prev, msg.message]);
     });
 
-    socket.on(USER_JOIN_CLUB_ROOM, ({ users, chats }) => {
+    socket.on(CLUB_ROOM_JOINED, ({ users, chats }) => {
       console.log("New User Has Joined the Room", users)
       setUsers(users);
-      setMessages(chats)
-      console.log(chats)
+      // setMessages(chats)
+      console.log("Chats from socket",chats)
     });
 
 
-    socket.on(EDITED_CLUB_MESSAGE, ( {msg}) => {
+    socket.on(CLUB_MESSAGE_EDITED, ({ msg }) => {
       console.log('This get Invoked', msg._id)
       setMessages((prevMessages) =>
         prevMessages.map((m) => (m._id === msg._id ? msg : m))
@@ -45,18 +42,30 @@ const App = () => {
 
     return () => {
       socket.off(RECEIVE_CLUB_MESSAGE);
-      socket.off(USER_JOIN_CLUB_ROOM);
-      socket.off(EDITED_CLUB_MESSAGE)
+      socket.off(CLUB_ROOM_JOINED);
+      socket.off(CLUB_MESSAGE_EDITED)
     };
   }, [joined, conversationId]);
 
-  const joinChat = async () => {
+  useEffect(() => {
+    if (conversationId)
+      getMessagesByConversationId(conversationId);
+
+  }, [conversationId])
+
+  async function getMessagesByConversationId(conversationId) {
+    const getConversationMessages = await apiGET(`/v1/chat-messages/get/${conversationId}`)
+    console.log('getConversationMessages', getConversationMessages?.data?.data?.messages)
+    setMessages(getConversationMessages?.data?.data?.messages)
+  }
+
+  const joinChat = () => {
     setLoading(true);
     console.log(username, roomId)
     if (username.trim() && roomId.trim()) {
-      await socket.emit(JOIN_CLUB_ROOM, { memberId: username, conversationId: roomId });
+      socket.emit(JOIN_CLUB_ROOM, { memberId: username, conversationId: roomId });
       setJoined(true);
-
+      setConversationId(roomId)
       setLoading(false)
     }
   };
@@ -87,7 +96,7 @@ const App = () => {
 
   const confirmUpdate = () => {
     if (messageId.trim()) {
-      socket.emit(UPDATE_CLUB_MESSAGE, { messageId, senderId: username, updateMessage, conversationId: roomId });
+      socket.emit(EDIT_CLUB_MESSAGE, { messageId, senderId: username, updateMessage, conversationId: roomId });
       setMessageId("");
       setUpdateMessage("")
       setUpdateModal(false);
