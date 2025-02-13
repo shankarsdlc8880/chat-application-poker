@@ -21,7 +21,7 @@ const ChatRoom = ({
     updateMessage,
     confirmUpdate
 }) => {
-  
+    
 
   return (
     <>
@@ -141,7 +141,7 @@ const styles = {
     gap: "10px",
   },
   chatBox: {
-    width: "1000px",
+    width: "800px",
     height: "80vh",
     display: "flex",
     flexDirection: "column",
