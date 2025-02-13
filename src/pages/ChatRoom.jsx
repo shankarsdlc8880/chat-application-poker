@@ -3,146 +3,29 @@ import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM,
 import socket from "../socket";
 import { apiGET } from "../utils/apiHelper";
 
-const ChatRoom = () => {
-  const [userId, setUserId] = useState("");
-  const [conversationId, setConversationId] = useState("");
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [joined, setJoined] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [roomId, setRoomId] = useState("");
-  const [username, setUsername] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [messageId, setMessageId] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [updateModal, setUpdateModal] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState("");
-
-  useEffect(() => {
-    socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
-      console.log("New Message Received", msg);
-      setMessages((prev) => [...prev, msg.message]);
-    });
-
-    socket.on(CLUB_ROOM_JOINED, ({ users, chats }) => {
-      console.log("New User Has Joined the Room", users);
-      setUsers(users);
-      // setMessages(chats)
-      console.log("Chats from socket", chats);
-    });
-
-    socket.on(CLUB_MESSAGE_EDITED, ({ msg }) => {
-      console.log("This get Invoked", msg._id);
-      setMessages((prevMessages) =>
-        prevMessages.map((m) => (m._id === msg._id ? msg : m))
-      );
-    });
-
-    return () => {
-      socket.off(RECEIVE_CLUB_MESSAGE);
-      socket.off(CLUB_ROOM_JOINED);
-      socket.off(CLUB_MESSAGE_EDITED);
-    };
-  }, [joined, conversationId]);
-
-  useEffect(() => {
-    if (conversationId) getMessagesByConversationId(conversationId);
-  }, [conversationId]);
-
-  async function getMessagesByConversationId(conversationId) {
-    const getConversationMessages = await apiGET(
-      `/v1/chat-messages/get/${conversationId}`
-    );
-    console.log(
-      "getConversationMessages",
-      getConversationMessages?.data?.data?.messages
-    );
-    setMessages(getConversationMessages?.data?.data?.messages);
-  }
-
-  const joinChat = () => {
-    setLoading(true);
-    console.log(username, roomId);
-    if (username.trim() && roomId.trim()) {
-      socket.emit(JOIN_CLUB_ROOM, {
-        memberId: username,
-        conversationId: roomId,
-      });
-      setJoined(true);
-      setConversationId(roomId);
-      setLoading(false);
-    }
-  };
-
-  const leaveChat = () => {
-    socket.emit(LEAVE_CLUB_ROOM, {
-      memberId: username,
-      conversationId: roomId,
-    });
-    setJoined(false);
-    setUsers([]);
-    setMessages([]);
-  };
-
-  const sendMessage = () => {
-    if (message.trim()) {
-      console.log("Sending Message>>>>>");
-      socket.emit(SEND_CLUB_MESSAGE, {
-        conversationId: roomId,
-        message,
-        senderId: username,
-      });
-      setMessage("");
-    }
-  };
-
-  const confirmDeleteMessage = () => {
-    if (messageId.trim()) {
-      socket.emit(DELETE_CLUB_MESSAGE, { messageId });
-      setMessages(messages.filter((item) => item._id !== messageId));
-      setShowPopup(false);
-      setMessageId("");
-    }
-  };
-
-  const confirmUpdate = () => {
-    if (messageId.trim()) {
-      socket.emit(EDIT_CLUB_MESSAGE, {
-        messageId,
-        senderId: username,
-        updateMessage,
-        conversationId: roomId,
-      });
-      setMessageId("");
-      setUpdateMessage("");
-      setUpdateModal(false);
-    }
-  };
+const ChatRoom = ({
+    leaveChat, 
+    loading, 
+    messages, 
+    username,
+    setShowPopup,
+    setMessageId,
+    setUpdateMessage,
+    setUpdateModal,
+    message,
+    sendMessage,
+    setMessage,
+    showPopup,
+    confirmDeleteMessage,
+    updateModal,
+    updateMessage,
+    confirmUpdate
+}) => {
+  
 
   return (
-    <div style={styles.container}>
-      {!joined ? (
-        <div style={styles.joinBox}>
-          <input
-            type="text"
-            placeholder="Enter User ID"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={styles.input}
-          />
-          <input
-            type="text"
-            placeholder="Enter your room id"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            style={styles.input}
-          />
-          <button onClick={joinChat} style={styles.button}>
-            Join Chat
-          </button>
-        </div>
-      ) : (
-        <div style={styles.chatBox}>
+    <>
+    <div style={styles.chatBox}>
           <button onClick={leaveChat} style={styles.leaveButton}>
             Leave Chat
           </button>
@@ -201,9 +84,8 @@ const ChatRoom = () => {
               Send
             </button>
           </div>
-        </div>
-      )}
-      {showPopup && (
+    </div>
+    {showPopup && (
         <div style={styles.popup}>
           <h4>Are you sure ? want to delete this message.</h4>
           <button onClick={confirmDeleteMessage} style={styles.confirmButton}>
@@ -246,7 +128,7 @@ const ChatRoom = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
