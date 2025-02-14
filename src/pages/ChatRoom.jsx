@@ -1,91 +1,108 @@
 import React, { useEffect, useState } from "react";
-import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, CLUB_MESSAGE_EDITED, EDIT_CLUB_MESSAGE } from "../soketConstants";
-import socket from "../socket";
 import { apiGET } from "../utils/apiHelper";
 
 const ChatRoom = ({
-    leaveChat, 
-    loading, 
-    messages, 
-    username,
-    setShowPopup,
-    setMessageId,
-    setUpdateMessage,
-    setUpdateModal,
-    message,
-    sendMessage,
-    setMessage,
-    showPopup,
-    confirmDeleteMessage,
-    updateModal,
-    updateMessage,
-    confirmUpdate
+  joinChat,
+  leaveChat,
+  loading,
+  username,
+  setShowPopup,
+  setMessageId,
+  setUpdateMessage,
+  setUpdateModal,
+  sendMessage,
+  showPopup,
+  confirmDeleteMessage,
+  updateModal,
+  updateMessage,
+  confirmUpdate,
+  activeConversation,
+  message,
+  setMessage,
+  messages,
+  setMessages,
 }) => {
-    
+
+  useEffect(() => {
+    joinChat();
+    console.log("activeConversation", activeConversation)
+    if (activeConversation) getMessagesByConversationId(activeConversation._id);
+  }, [activeConversation]);
+
+  async function getMessagesByConversationId(conversationId) {
+    const getConversationMessages = await apiGET(
+      `/v1/chat-messages/get/${conversationId}`
+    );
+    console.log(
+      "getConversationMessages",
+      getConversationMessages?.data?.data?.messages
+    );
+    setMessages(getConversationMessages?.data?.data?.messages);
+  }
 
   return (
     <>
-    <div style={styles.chatBox}>
-          <button onClick={leaveChat} style={styles.leaveButton}>
-            Leave Chat
+      <div style={styles.chatBox}>
+        <button onClick={leaveChat} style={styles.leaveButton}>
+          Leave Chat
+        </button>
+        <div style={styles.messages}>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            messages?.length > 0 &&
+            messages.map((msg, i) => (
+              <div
+                key={i}
+                style={
+                  msg.senderId == username
+                    ? styles.myMessage
+                    : styles.otherMessage
+                }
+              >
+                <strong>{msg.senderId}: </strong> {msg.message}
+                {msg.senderId === username && (
+                  <button
+                    style={styles.deleteButton}
+                    onClick={() => {
+                      setShowPopup(true);
+                      setMessageId(msg._id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+                {msg.senderId === username && (
+                  <button
+                    style={styles.deleteButton}
+                    onClick={() => {
+                      setUpdateMessage(msg?.message);
+                      setMessageId(msg._id);
+                      setUpdateModal(true);
+                    }}
+                  >
+                    Update
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        <div style={styles.inputBox}>
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            style={styles.input}
+          />
+          <button onClick={sendMessage} style={styles.button}>
+            Send
           </button>
-          <div style={styles.messages}>
-            {loading ? (
-              <p>Loading...</p>
-            ) : (
-              messages?.length > 0 &&
-              messages.map((msg, i) => (
-                <div
-                  key={i}
-                  style={
-                    msg.senderId == username
-                      ? styles.myMessage
-                      : styles.otherMessage
-                  }
-                >
-                  <strong>{msg.senderId}: </strong> {msg.message}
-                  {msg.senderId === username && (
-                    <button
-                      style={styles.deleteButton}
-                      onClick={() => {
-                        setShowPopup(true);
-                        setMessageId(msg._id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  )}
-                  {msg.senderId === username && (
-                    <button
-                      style={styles.deleteButton}
-                      onClick={() => {
-                        setUpdateMessage(msg?.message);
-                        setMessageId(msg._id);
-                        setUpdateModal(true);
-                      }}
-                    >
-                      Update
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-          <div style={styles.inputBox}>
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              style={styles.input}
-            />
-            <button onClick={sendMessage} style={styles.button}>
-              Send
-            </button>
-          </div>
-    </div>
-    {showPopup && (
+        </div>
+      </div>
+      {showPopup && (
         <div style={styles.popup}>
           <h4>Are you sure ? want to delete this message.</h4>
           <button onClick={confirmDeleteMessage} style={styles.confirmButton}>
@@ -141,7 +158,7 @@ const styles = {
     gap: "10px",
   },
   chatBox: {
-    width: "800px",
+    width: "600px",
     height: "80vh",
     display: "flex",
     flexDirection: "column",
