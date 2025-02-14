@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ConversationList from './conversationList';
+import useConnectSocket from '../socket';
 
 const ConversationsPage = () => {
+    const socketRef = useRef({})
     const [submitted, setSubmitted] = useState(false);
     const [clubId, setClubId] = useState("67aed51a38826e2c440006bd");
-    const [userId, setUserId] = useState("2d143794-aa17-4d54-9d1b-6be20ac79378");
+    const [userId, setUserId] = useState("");
     const [token, setToken] = useState("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJkODY5ODgyLWQyYjgtNGFjMS1hMzMxLTE5MDE3MTQ0NjBiYiIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzM5NDI1NjIzLCJleHAiOjE3NDIwMTc2MjMsImlzcyI6IlBva2VyIEF1dGhlbnRpY2F0aW9uIHNlcnZpY2UiLCJzdWIiOiJ0ZXN0QHNkbGNjb3JwLmNvbSJ9.UYJJU5on0jcU9vtkQxdcsyaM5R7V7gGxpRnwZSzqOsGWMMJxrW51-u-gSf1UFpyM1wGrLcirClymYj7V5tCotGtCFp4VD3OBg-rS0YlqjnitCQpBu9-pt9draFDzO8KFFdmN3_X0hKXOtspROfofhsCehnlXxZKXLWyc9sR0ZXbKgG1CMI8vZ21QJHsun1PyXkAGF2i7sg9ovhW9hw-lRObjwTKMKwhftuVwaZIOdonDLo7Q5hTt3wRaCbiRK9HgkRq_eKCQo77WemY9mElXD2jYxiQ-K7sja0TKswn5ZmG-f9VKg_IwKcjH0Lm79M_oLdw1wFW4M16SHWY7k50ZzA");
 
     const handleSubmitClick = () => {
         if (clubId) setSubmitted(true);
         localStorage.setItem("accessToken", token);
+        handleSocketConnect()
+    }
+    const { connectToSocket } = useConnectSocket()
+
+
+    // useEffect(() => {
+    //     if (userId) {
+    //         let socket = connectToSocket(userId)
+    //         console.log(socket);
+    //         socketRef.current = socket;
+
+    //     }
+    // }, [userId])
+
+    const handleSocketConnect = () => {
+        let socket = connectToSocket(userId)
+        console.log(socket);
+        socketRef.current = socket;
     }
     return (
         <div style={styles.container}>
@@ -32,7 +52,7 @@ const ConversationsPage = () => {
                     {/* <button onClick={joinChat} style={styles.button}>Join Chat</button> */}
                 </div>
                 :
-                <ConversationList clubId={clubId} token={token} userId={userId} />
+                <ConversationList key={socketRef.current} clubId={clubId} token={token} userId={userId} socket={socketRef.current} />
             }
         </div>
     )

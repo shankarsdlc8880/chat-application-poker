@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { apiGET, apiPOST } from "../utils/apiHelper";
 import ChatRoom from "../pages/ChatRoom";
 import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, CLUB_MESSAGE_EDITED, EDIT_CLUB_MESSAGE } from "../soketConstants";
-import socket from "../socket";
 
-const ConversationList = ({ clubId, userId }) => {
+const ConversationList = ({ clubId, userId, socket }) => {
     const [conversationId, setConversationId] = useState("");
     const [joined, setJoined] = useState(false);
     const [users, setUsers] = useState([]);
@@ -39,7 +38,11 @@ const ConversationList = ({ clubId, userId }) => {
     }
 
 
+    
+
     useEffect(() => {
+       
+        if(!socket) return
         socket.on(RECEIVE_CLUB_MESSAGE, (msg) => {
             console.log("New Message Received", msg);
             setMessages((prev) => [...prev, msg.message]);
@@ -53,7 +56,7 @@ const ConversationList = ({ clubId, userId }) => {
         });
 
         socket.on(CLUB_MESSAGE_EDITED, ({ msg }) => {
-            console.log("This get Invoked", msg._id);
+            console.log("This get Invoked",msg);
             setMessages((prevMessages) =>
                 prevMessages.map((m) => (m._id === msg._id ? msg : m))
             );
@@ -68,12 +71,15 @@ const ConversationList = ({ clubId, userId }) => {
 
     const joinChat = () => {
         const roomId = activeConversation._id;
-        console.log("joining room ", roomId)
         setLoading(true);
         console.log(userId, roomId);
-        if (username.trim() && roomId.trim()) {
+        if (userId.trim() && roomId.trim()) {
+
+            console.log("joining room ", roomId)
+
+
             socket.emit(JOIN_CLUB_ROOM, {
-                memberId: username,
+                memberId: userId,
                 conversationId: roomId,
             });
             setJoined(true);
@@ -170,6 +176,7 @@ const ConversationList = ({ clubId, userId }) => {
                     messages={messages}
                     setMessages={setMessages}
                     activeConversation={activeConversation}
+                    userId ={userId}
                 />
                 : ""}
 

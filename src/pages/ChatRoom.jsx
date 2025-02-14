@@ -21,6 +21,7 @@ const ChatRoom = ({
   setMessage,
   messages,
   setMessages,
+  userId
 }) => {
 
   useEffect(() => {
@@ -61,7 +62,7 @@ const ChatRoom = ({
                 }
               >
                 <strong>{msg.senderId}: </strong> {msg.message}
-                {msg.senderId === username && (
+                {msg.senderId === userId && (
                   <button
                     style={styles.deleteButton}
                     onClick={() => {
@@ -72,7 +73,7 @@ const ChatRoom = ({
                     Delete
                   </button>
                 )}
-                {msg.senderId === username && (
+                {msg.senderId === userId && (
                   <button
                     style={styles.deleteButton}
                     onClick={() => {
