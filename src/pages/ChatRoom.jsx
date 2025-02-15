@@ -56,13 +56,13 @@ const ChatRoom = ({
               <div
                 key={i}
                 style={
-                  msg.senderId == username
+                  msg?.senderId === userId
                     ? styles.myMessage
                     : styles.otherMessage
                 }
               >
-                <strong>{msg.senderId}: </strong> {msg.message}
-                {msg.senderId === userId && (
+                <strong>{msg?.userData?.username || msg?.senderId }: </strong> {msg?.message}
+                {msg?.senderId === userId && (
                   <button
                     style={styles.deleteButton}
                     onClick={() => {
@@ -73,12 +73,12 @@ const ChatRoom = ({
                     Delete
                   </button>
                 )}
-                {msg.senderId === userId && (
+                {msg?.senderId === userId && (
                   <button
                     style={styles.deleteButton}
                     onClick={() => {
                       setUpdateMessage(msg?.message);
-                      setMessageId(msg._id);
+                      setMessageId(msg?._id);
                       setUpdateModal(true);
                     }}
                   >
@@ -151,7 +151,7 @@ const ChatRoom = ({
 };
 
 const styles = {
-  container: { textAlign: "center", padding: "20px" },
+  container: { textAlign: "center", padding: "20px", gap: "8px" },
   joinBox: {
     display: "flex",
     flexDirection: "column",
@@ -179,6 +179,7 @@ const styles = {
     padding: "10px",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+    flexDirection: "column", // Ensures messages stack correctly
   },
   inputBox: {
     display: "flex",
@@ -218,7 +219,12 @@ const styles = {
     borderRadius: "5px",
     marginBottom: "5px",
     display: "flex",
-    justifyContent: "space-between",
+    maxWidth: "100%", 
+    // justifyContent: "space-between",
+    justifyContent: "flex-end", // Aligns message to the right
+    alignSelf: "flex-end", // Pushes message to the right
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap", // Handles new lines
   },
   otherMessage: {
     backgroundColor: "#f1f0f0",
@@ -226,7 +232,11 @@ const styles = {
     borderRadius: "5px",
     marginBottom: "5px",
     display: "flex",
-    justifyContent: "space-between",
+    // justifyContent: "space-between",
+    justifyContent: "flex-start", // Aligns message to the left
+    alignSelf: "flex-start", // Pushes message to the left
+    maxWidth: "100%", // Prevents stretching too much
+    wordBreak: "break-word",
   },
   deleteButton: {
     marginLeft: "10px",

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiGET, apiPOST } from "../utils/apiHelper";
 import ChatRoom from "../pages/ChatRoom";
-import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDIT_CLUB_MESSAGE } from "../soketConstants";
+import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDIT_CLUB_MESSAGE, ERROR_OCCURED_IN_CLUB_MESSAGE } from "../soketConstants";
 
 const ConversationList = ({ clubId, userId, socket }) => {
     const [conversationId, setConversationId] = useState("");
@@ -61,6 +61,12 @@ const ConversationList = ({ clubId, userId, socket }) => {
                 prevMessages.map((m) => (m._id === msg._id ? msg : m))
             );
         });
+
+        socket.on(ERROR_OCCURED_IN_CLUB_MESSAGE, ({ message }) => {
+            console.log("This get Invoked",message);
+            alert(message)
+            setMessages((prev) => [...prev]);
+        });
         
         socket.on(DELETE_CLUB_MESSAGE, ({ messageId }) => {
             console.log("Message deleted event received:", messageId);
@@ -72,6 +78,7 @@ const ConversationList = ({ clubId, userId, socket }) => {
             socket.off(CLUB_ROOM_JOINED);
             socket.off(EDIT_CLUB_MESSAGE);
             socket.off(DELETE_CLUB_MESSAGE);
+            socket.off(ERROR_OCCURED_IN_CLUB_MESSAGE);
         };
     }, [joined, conversationId]);
 
@@ -155,8 +162,19 @@ const ConversationList = ({ clubId, userId, socket }) => {
 
             <ul style={styles.list}>
                 {conversationList.map((conversation) => (
-                    <li onClick={() => setActiveConversation(conversation)} key={conversation._id} style={styles.listItem}>
-                        <p style={styles.text}>Conversation ID: {conversation._id}</p>
+                    <li onClick={() => setActiveConversation(conversation)} key={conversation._id} 
+                    // style={styles.listItem}
+                    style={{
+                        ...styles.listItem, 
+                        backgroundColor: activeConversation?._id === conversation._id ? "#d4edda" : "#f5f5f5"
+                    }}
+                    >
+                        {
+                            (conversation.type === 'personal' && conversation?.userData?.username)
+                            ?<p style={styles.text}>{conversation?.userData?.username + "-" + conversation._id}</p>
+                            :<p style={styles.text}>Club Group</p>
+                        }
+                        
                     </li>
                 ))}
             </ul>
