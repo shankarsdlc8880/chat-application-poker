@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiGET, apiPOST } from "../utils/apiHelper";
 import ChatRoom from "../pages/ChatRoom";
-import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, CLUB_MESSAGE_EDITED, EDIT_CLUB_MESSAGE } from "../soketConstants";
+import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDIT_CLUB_MESSAGE } from "../soketConstants";
 
 const ConversationList = ({ clubId, userId, socket }) => {
     const [conversationId, setConversationId] = useState("");
@@ -55,17 +55,23 @@ const ConversationList = ({ clubId, userId, socket }) => {
             console.log("Chats from socket", chats);
         });
 
-        socket.on(CLUB_MESSAGE_EDITED, ({ msg }) => {
+        socket.on(EDIT_CLUB_MESSAGE, ({ msg }) => {
             console.log("This get Invoked",msg);
             setMessages((prevMessages) =>
                 prevMessages.map((m) => (m._id === msg._id ? msg : m))
             );
         });
+        
+        socket.on(DELETE_CLUB_MESSAGE, ({ messageId }) => {
+            console.log("Message deleted event received:", messageId);
+            setMessages(prevMessages => prevMessages.filter(msg => msg._id !== messageId));
+        });
 
         return () => {
             socket.off(RECEIVE_CLUB_MESSAGE);
             socket.off(CLUB_ROOM_JOINED);
-            socket.off(CLUB_MESSAGE_EDITED);
+            socket.off(EDIT_CLUB_MESSAGE);
+            socket.off(DELETE_CLUB_MESSAGE);
         };
     }, [joined, conversationId]);
 
@@ -112,9 +118,9 @@ const ConversationList = ({ clubId, userId, socket }) => {
     };
 
     const confirmDeleteMessage = () => {
+        const roomId = activeConversation._id;
         if (messageId.trim()) {
-            socket.emit(DELETE_CLUB_MESSAGE, { messageId });
-            setMessages(messages.filter((item) => item._id !== messageId));
+            socket.emit(DELETE_CLUB_MESSAGE, { messageId, conversationId:roomId });
             setShowPopup(false);
             setMessageId("");
         }
