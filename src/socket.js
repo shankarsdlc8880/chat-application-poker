@@ -1,7 +1,7 @@
 import io from "socket.io-client";
 const SOCKET_URL = "http://localhost:4001"; // Change this to your backend socket URL
 
-const useConnectSocket = (userId) =>{
+const useConnectSocket = () =>{
  
   
  
