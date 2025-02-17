@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiGET, apiPOST } from "../utils/apiHelper";
 import ChatRoom from "../pages/ChatRoom";
-import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDIT_CLUB_MESSAGE, ERROR_OCCURED_IN_CLUB_MESSAGE } from "../soketConstants";
+import { JOIN_CLUB_ROOM, DELETE_CLUB_MESSAGE, CLUB_ROOM_JOINED, LEAVE_CLUB_ROOM, SEND_CLUB_MESSAGE, RECEIVE_CLUB_MESSAGE, EDIT_CLUB_MESSAGE, ERROR_OCCURED_IN_CLUB_MESSAGE, CLUB_MESSAGE_DELETED, CLUB_MESSAGE_EDITED } from "../soketConstants";
 
 const ConversationList = ({ clubId, userId, socket }) => {
     const [conversationId, setConversationId] = useState("");
@@ -55,7 +55,7 @@ const ConversationList = ({ clubId, userId, socket }) => {
             console.log("Chats from socket", chats);
         });
 
-        socket.on(EDIT_CLUB_MESSAGE, ({ msg }) => {
+        socket.on(CLUB_MESSAGE_EDITED, ({ msg }) => {
             console.log("This get Invoked",msg);
             setMessages((prevMessages) =>
                 prevMessages.map((m) => (m._id === msg._id ? msg : m))
@@ -68,7 +68,7 @@ const ConversationList = ({ clubId, userId, socket }) => {
             setMessages((prev) => [...prev]);
         });
         
-        socket.on(DELETE_CLUB_MESSAGE, ({ messageId }) => {
+        socket.on(CLUB_MESSAGE_DELETED, ({ messageId }) => {
             console.log("Message deleted event received:", messageId);
             setMessages(prevMessages => prevMessages.filter(msg => msg._id !== messageId));
         });
@@ -76,8 +76,8 @@ const ConversationList = ({ clubId, userId, socket }) => {
         return () => {
             socket.off(RECEIVE_CLUB_MESSAGE);
             socket.off(CLUB_ROOM_JOINED);
-            socket.off(EDIT_CLUB_MESSAGE);
-            socket.off(DELETE_CLUB_MESSAGE);
+            socket.off(CLUB_MESSAGE_EDITED);
+            socket.off(CLUB_MESSAGE_DELETED);
             socket.off(ERROR_OCCURED_IN_CLUB_MESSAGE);
         };
     }, [joined, conversationId]);
