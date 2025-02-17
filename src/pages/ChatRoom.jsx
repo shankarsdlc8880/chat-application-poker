@@ -38,7 +38,7 @@ const ChatRoom = ({
       "getConversationMessages",
       getConversationMessages?.data?.data?.messages
     );
-    setMessages(getConversationMessages?.data?.data?.messages);
+    setMessages(getConversationMessages?.data?.data?.messages?.reverse());
   }
 
   return (
